@@ -59,17 +59,13 @@ brew update --force --quiet
 
 # ── Core tools ────────────────────────────────────────────────────────────────
 fancy_echo "Installing core tools..."
-brew bundle --quiet --file=- <<EOF
-brew "git"
-brew "node"
-brew "python3"
-brew "wget"
-brew "jq"
-brew "gh"
-brew "ffmpeg"
-brew "imagemagick"
-brew "poppler"
-EOF
+for pkg in git node python3 wget jq gh ffmpeg imagemagick poppler; do
+  if brew list --formula "$pkg" &>/dev/null; then
+    echo "  → $pkg already installed"
+  else
+    brew install "$pkg"
+  fi
+done
 success_echo "Core tools installed"
 
 # ── Node 24 ───────────────────────────────────────────────────────────────────
