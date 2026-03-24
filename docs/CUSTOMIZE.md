@@ -1,46 +1,57 @@
 # Customizing Your Instance
 
-After running `install.sh`, your identity files are at `~/clawd/`.
-Edit these before starting the gateway:
+After running `install.sh`, your identity files land at `~/.openclaw/workspace/`.  
+Edit these three files before running onboarding:
 
-## Required Edits
-
-### IDENTITY.md
-- Replace `[AI_NAME]` with your chosen name for this AI
+## The Three Files
 
 ### SOUL.md
-- Replace `[AI_NAME]` and `[OWNER_NAME]` throughout
-- Add any domain-specific rules (clinical guardrails, brand voice, etc.)
+Your AI's personality, values, and operating rules.  
+Replace `[AI_NAME]`, `[OWNER_NAME]`, `[TIMEZONE]` and add any domain-specific rules.
 
-### USER.md
-- Fill in owner's name, nickname, timezone, and role
+### AGENTS.md
+Workspace behaviour — session startup, memory rules, red lines.  
+Add instance-specific execution rules at the bottom.
 
-### MEMORY.md
-- Add the admin WhatsApp number
-- Add any known blockers or context
+### TOOLS.md
+Environment-specific notes — SSH aliases, camera names, device nicknames, TTS preferences.  
+Fill in as you configure the instance. Nothing goes here until you know what's on the machine.
 
-## API Keys (after editing identity files)
+---
 
-Run `openclaw setup` and enter when prompted:
-- Anthropic API key (required)
-- OpenAI key (optional)
-- ElevenLabs key (optional)
+## Run Onboarding
 
-## Link WhatsApp
+Once you've edited the identity files:
 
 ```bash
-openclaw link whatsapp
+openclaw onboard --install-daemon
 ```
-Scan the QR code with the phone number dedicated to this instance.
 
-## Start the Gateway
+This installs the Gateway as a launchd service (stays running after reboot),  
+walks you through API key setup, and links your messaging channel.
+
+---
+
+## Link a Messaging Channel
+
+During onboarding or after:
 
 ```bash
-openclaw gateway start
+# WhatsApp
+openclaw channels login
+
+# Or follow the interactive onboarding prompts
+```
+
+---
+
+## Verify
+
+```bash
 openclaw gateway status
 ```
 
-Send `/status` on WhatsApp to confirm the instance is live.
+Send `/status` on your linked channel — the agent should respond.
 
 ---
 
@@ -49,4 +60,5 @@ Send `/status` on WhatsApp to confirm the instance is live.
 1. Copy `instances/_template/` to `instances/[name]/`
 2. Fill in the placeholders
 3. Run `install.sh` on the new machine
-4. Replace `~/clawd/` files with your customized instance files
+4. Edit `~/.openclaw/workspace/` files on that machine
+5. `openclaw onboard --install-daemon`
