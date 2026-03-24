@@ -89,7 +89,6 @@ success_echo "Node $(node --version)"
 fancy_echo "Installing Python packages..."
 # macOS + Homebrew Python 3.12+ requires --break-system-packages (PEP 668)
 PIP_FLAGS="--quiet --break-system-packages"
-pip3 install $PIP_FLAGS --upgrade pip
 pip3 install $PIP_FLAGS \
   requests reportlab pillow python-dotenv \
   google-auth google-auth-oauthlib google-api-python-client \
