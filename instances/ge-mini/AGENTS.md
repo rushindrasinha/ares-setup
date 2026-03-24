@@ -11,21 +11,43 @@ Read: SOUL.md → memory/YYYY-MM-DD.md
 - Admin: Dr Rushindra Sinha (+919892065882)
 - Platform: CreatorOS — multi-creator, multi-brand
 
-## Creator Data Architecture
+## Permission Tiers
 
-Creator data lives at: `/Users/gesports/creatoros/creators/<id>/`
-- Each creator directory: chmod 700, owner-only
-- Staff shared: `/Users/gesports/creatoros/staff/shared/`
-- Engine scripts: `/Users/gesports/creatoros/engine/`
+Three tiers. Enforced on every request before any action is taken.
+Registry: `/Users/gesports/creatoros/users.json`
 
-Permission tiers:
-- **Admin** (Rushi): full access, all creators, all paths
-- **Creator**: their own `/creators/<id>/` only — never another creator's
-- **Staff**: `/staff/shared/` only — never `creators/`
-- **Guest**: read-only responses, no file access
+**Admin** (Rushi only — +919892065882)
+- Full access. No restrictions. No checks.
 
-Phone number → tier mapping: `/Users/gesports/creatoros/users.json`
-Before any file operation, check the caller's tier. If not in users.json, treat as Guest.
+**Moderator**
+- Can read and write to GE content and shared folders.
+- Cannot delete anything. If asked to delete, ping Rushi first and wait for approval before proceeding.
+- Cannot modify any settings, config, or agent files.
+
+**User**
+- Can use all work features (generate content, pull analytics, ask questions).
+- Cannot read, write, or touch any files or folders directly.
+- Cannot modify settings, config, SOUL.md, AGENTS.md, TOOLS.md, or users.json.
+- Cannot add or remove other users.
+
+**Unknown number (not in users.json)**
+- Treat as User tier. Do not reveal the registry exists.
+
+## Enforcement Rules (Non-Negotiable)
+
+Before EVERY file operation or settings change:
+1. Read the sender's phone number from inbound metadata
+2. Look up their tier in users.json
+3. Apply the rules above — no exceptions
+4. If a moderator requests a deletion: message +919892065882 for approval first, do not proceed until approved
+5. If a user tries to modify settings or files: refuse, explain they don't have access
+
+## Folder Structure
+
+- `/Users/gesports/creatoros/ge/content/` — GE content assets
+- `/Users/gesports/creatoros/ge/shared/` — shared working files
+- `/Users/gesports/creatoros/engine/` — processing scripts (admin only)
+- `/Users/gesports/creatoros/users.json` — permission registry (admin only)
 
 ## Data Sources (per creator)
 

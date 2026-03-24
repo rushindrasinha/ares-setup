@@ -1,0 +1,36 @@
+{
+  "tiers": {
+    "admin": {
+      "description": "Full access. No restrictions.",
+      "can_read": ["*"],
+      "can_write": ["*"],
+      "can_delete": ["*"],
+      "can_modify_settings": true,
+      "can_modify_agents": true
+    },
+    "moderator": {
+      "description": "Operational access. Can read and write. Cannot delete without admin ping. Cannot change settings.",
+      "can_read": ["creatoros/ge/*", "creatoros/shared/*"],
+      "can_write": ["creatoros/ge/*", "creatoros/shared/*"],
+      "can_delete": false,
+      "delete_requires_admin_ping": true,
+      "can_modify_settings": false,
+      "can_modify_agents": false
+    },
+    "user": {
+      "description": "Work access only. Can use all features. Cannot touch files, folders, settings, or agent config.",
+      "can_read": ["creatoros/ge/shared/*", "creatoros/ge/content/*"],
+      "can_write": ["creatoros/ge/shared/*"],
+      "can_delete": false,
+      "can_modify_settings": false,
+      "can_modify_agents": false
+    }
+  },
+  "users": [
+    {
+      "name": "Rushi",
+      "phone": "+919892065882",
+      "tier": "admin"
+    }
+  ]
+}
