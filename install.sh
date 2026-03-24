@@ -87,17 +87,13 @@ success_echo "Node $(node --version)"
 
 # ── Python packages ───────────────────────────────────────────────────────────
 fancy_echo "Installing Python packages..."
-# --break-system-packages needed on Python 3.12+ (PEP 668 externally-managed env)
-pip3 install --quiet --upgrade pip --break-system-packages 2>/dev/null \
-  || pip3 install --quiet --upgrade pip
-pip3 install --quiet --break-system-packages 2>/dev/null \
+# macOS + Homebrew Python 3.12+ requires --break-system-packages (PEP 668)
+PIP_FLAGS="--quiet --break-system-packages"
+pip3 install $PIP_FLAGS --upgrade pip
+pip3 install $PIP_FLAGS \
   requests reportlab pillow python-dotenv \
   google-auth google-auth-oauthlib google-api-python-client \
-  openai anthropic \
-  || pip3 install --quiet \
-    requests reportlab pillow python-dotenv \
-    google-auth google-auth-oauthlib google-api-python-client \
-    openai anthropic
+  openai anthropic
 success_echo "Python packages installed"
 
 # ── uv ────────────────────────────────────────────────────────────────────────
