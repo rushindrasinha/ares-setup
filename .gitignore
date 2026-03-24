@@ -1,0 +1,11 @@
+# Never commit secrets or keys
+*.env
+.env*
+*secret*
+*api_key*
+*token*
+*.pickle
+*.json.bak
+
+# OS
+.DS_Store
