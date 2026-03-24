@@ -87,13 +87,16 @@ success_echo "Node $(node --version)"
 
 # ── Python packages ───────────────────────────────────────────────────────────
 fancy_echo "Installing Python packages..."
-# macOS + Homebrew Python 3.12+ requires --break-system-packages (PEP 668)
-PIP_FLAGS="--quiet --break-system-packages"
-pip3 install $PIP_FLAGS \
+# Use a venv — avoids all --break-system-packages / PEP 668 / pip RECORD issues
+ARES_VENV="$HOME/.ares-venv"
+python3 -m venv "$ARES_VENV"
+"$ARES_VENV/bin/pip" install --quiet \
   requests reportlab pillow python-dotenv \
   google-auth google-auth-oauthlib google-api-python-client \
   openai anthropic
-success_echo "Python packages installed"
+append_to_zshrc "export PATH=\"\$HOME/.ares-venv/bin:\$PATH\""
+export PATH="$ARES_VENV/bin:$PATH"
+success_echo "Python packages installed (venv: $ARES_VENV)"
 
 # ── uv ────────────────────────────────────────────────────────────────────────
 if ! command -v uv >/dev/null 2>&1; then
