@@ -59,7 +59,7 @@ brew update --force --quiet
 
 # ── Core tools ────────────────────────────────────────────────────────────────
 fancy_echo "Installing core tools..."
-brew bundle --quiet --no-lock --file=- <<EOF
+brew bundle --quiet --file=- <<EOF
 brew "git"
 brew "node"
 brew "python3"
