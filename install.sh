@@ -114,6 +114,11 @@ fancy_echo "Installing OpenClaw..."
 npm install -g openclaw@latest
 success_echo "OpenClaw $(openclaw --version 2>/dev/null || echo 'installed')"
 
+# ── Claude Code ───────────────────────────────────────────────────────────────
+fancy_echo "Installing Claude Code..."
+npm install -g @anthropic-ai/claude-code
+success_echo "Claude Code $(claude --version 2>/dev/null || echo 'installed')"
+
 # ── Workspace scaffold ────────────────────────────────────────────────────────
 fancy_echo "Scaffolding workspace..."
 WORKSPACE="${HOME}/.openclaw/workspace"
