@@ -7,7 +7,8 @@
 #   bash <(curl -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh)
 #
 # After install:
-#   openclaw onboard --install-daemon
+#   cd ~ && git clone https://github.com/rushindrasinha/ares-stack.git
+#   cd ares-stack && bash extend.sh --profile <base|ge|hospital>
 #
 
 set -e
@@ -46,6 +47,34 @@ append_to_zshrc() {
   grep -qF "$text" "$zshrc" 2>/dev/null || printf "\n%s\n" "$text" >> "$zshrc"
 }
 
+# ── Hostname ──────────────────────────────────────────────────────────────────
+fancy_echo "Set machine hostname"
+printf "Enter hostname for this Mac (e.g. ares-mini, ge-mini, hospital-mini): "
+read -r MACHINE_NAME
+if [ -n "$MACHINE_NAME" ]; then
+  sudo scutil --set ComputerName "$MACHINE_NAME"
+  sudo scutil --set HostName "$MACHINE_NAME"
+  sudo scutil --set LocalHostName "$MACHINE_NAME"
+  success_echo "Hostname set to: $MACHINE_NAME"
+else
+  warn_echo "Skipped — hostname not changed"
+fi
+
+# ── System prefs (headless-safe) ──────────────────────────────────────────────
+fancy_echo "Configuring system for headless operation..."
+
+# Disable display sleep and system sleep
+sudo pmset -a displaysleep 0 sleep 0 disksleep 0 2>/dev/null && success_echo "Sleep disabled"
+
+# Enable remote login (SSH)
+sudo systemsetup -setremotelogin on 2>/dev/null && success_echo "SSH / Remote Login enabled"
+
+# Disable screen saver
+defaults write com.apple.screensaver idleTime 0 2>/dev/null && success_echo "Screen saver disabled"
+
+# Auto-restart after power failure
+sudo pmset -a autorestart 1 2>/dev/null && success_echo "Auto-restart after power failure enabled"
+
 # ── Homebrew ──────────────────────────────────────────────────────────────────
 if ! command -v brew >/dev/null 2>&1; then
   fancy_echo "Installing Homebrew..."
@@ -61,7 +90,7 @@ brew update --quiet
 
 # ── Core tools ────────────────────────────────────────────────────────────────
 fancy_echo "Installing core tools..."
-for pkg in git node python3 wget jq gh ffmpeg imagemagick poppler; do
+for pkg in git node python3 wget jq gh ffmpeg imagemagick poppler mas; do
   if brew list --formula "$pkg" &>/dev/null; then
     echo "  → $pkg already installed"
   else
@@ -69,6 +98,15 @@ for pkg in git node python3 wget jq gh ffmpeg imagemagick poppler; do
   fi
 done
 success_echo "Core tools installed"
+
+# ── Amphetamine (via mas — keeps Mac awake) ───────────────────────────────────
+fancy_echo "Installing Amphetamine from App Store..."
+if mas list 2>/dev/null | grep -q "937984704"; then
+  success_echo "Amphetamine already installed"
+else
+  mas install 937984704 && success_echo "Amphetamine installed" \
+    || warn_echo "Amphetamine install failed — install manually: https://apps.apple.com/app/id937984704"
+fi
 
 # ── Node 24 ───────────────────────────────────────────────────────────────────
 NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
@@ -87,7 +125,6 @@ success_echo "Node $(node --version)"
 
 # ── Python packages ───────────────────────────────────────────────────────────
 fancy_echo "Installing Python packages..."
-# Use a venv — avoids all --break-system-packages / PEP 668 / pip RECORD issues
 ARES_VENV="$HOME/.ares-venv"
 python3 -m venv "$ARES_VENV"
 "$ARES_VENV/bin/pip" install --quiet \
@@ -102,7 +139,6 @@ success_echo "Python packages installed (venv: $ARES_VENV)"
 if ! command -v uv >/dev/null 2>&1; then
   fancy_echo "Installing uv..."
   curl -LsSf https://astral.sh/uv/install.sh | sh
-  # uv installs to ~/.local/bin
   append_to_zshrc "export PATH=\"\$HOME/.local/bin:\$PATH\""
   export PATH="$HOME/.local/bin:$PATH"
 else
@@ -127,7 +163,6 @@ mkdir -p \
   "$WORKSPACE/skills" \
   "$HOME/.learnings"
 
-# Download template identity files directly from repo (works via curl)
 fancy_echo "Downloading identity templates..."
 for f in SOUL.md AGENTS.md TOOLS.md; do
   if [ ! -f "$WORKSPACE/$f" ]; then
@@ -139,7 +174,6 @@ for f in SOUL.md AGENTS.md TOOLS.md; do
   fi
 done
 
-# Bootstrap .learnings
 for f in ERRORS LEARNINGS DECISIONS REGRESSIONS; do
   touch "$HOME/.learnings/${f}.md"
 done
