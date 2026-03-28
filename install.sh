@@ -144,6 +144,17 @@ for f in ERRORS LEARNINGS DECISIONS REGRESSIONS; do
   touch "$HOME/.learnings/${f}.md"
 done
 
+# ── GitHub auth ───────────────────────────────────────────────────────────────
+fancy_echo "Authenticating GitHub (needed to clone private ares-stack)..."
+if ! gh auth status &>/dev/null; then
+  gh auth login --web --git-protocol https
+  if ! gh auth status &>/dev/null; then
+    warn_echo "GitHub auth failed. Run 'gh auth login' manually before cloning ares-stack."
+  fi
+else
+  success_echo "GitHub already authenticated ($(gh api user --jq '.login' 2>/dev/null))"
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 printf "\n"
 printf "\033[1;32m╔════════════════════════════════════════════╗\033[0m\n"
@@ -151,8 +162,9 @@ printf "\033[1;32m║        Machine setup complete ✓            ║\033[0m\n"
 printf "\033[1;32m╚════════════════════════════════════════════╝\033[0m\n"
 printf "\n"
 printf "Next steps:\n"
-printf "  1. Restart terminal  →  source ~/.zshrc\n"
-printf "  2. Edit identity     →  %s/\n" "$WORKSPACE"
-printf "     SOUL.md, AGENTS.md, TOOLS.md\n"
-printf "  3. Run onboarding    →  openclaw onboard --install-daemon\n"
+printf "  1. Restart terminal        →  source ~/.zshrc\n"
+printf "  2. Clone private stack     →  git clone https://github.com/rushindrasinha/ares-stack.git\n"
+printf "  3. Run profile setup       →  cd ares-stack && bash extend.sh --profile hospital\n"
+printf "  4. Start OpenClaw          →  openclaw gateway start\n"
+printf "  5. Link WhatsApp           →  openclaw wa link\n"
 printf "\n"
