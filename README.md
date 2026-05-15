@@ -117,14 +117,17 @@ nano ~/.openclaw/workspace/TOOLS.md   # Environment notes (SSH, devices, TTS)
 # Step 3 — Run OpenClaw onboarding (installs daemon + walks through API key setup)
 openclaw onboard --install-daemon
 
-# Step 4 — Link WhatsApp (or your messaging channel)
-openclaw channels login
+# Step 4 — Start OpenClaw gateway
+openclaw gateway start
 
-# Step 5 — Clone and run ares-stack (skills + profile tools)
+# Step 5 — Link WhatsApp (or your messaging channel)
+openclaw wa link
+
+# Step 6 — Clone and run ares-stack (skills + profile tools)
 git clone https://github.com/rushindrasinha/ares-stack.git
 cd ares-stack && bash extend.sh --profile base
 
-# Step 6 — Verify
+# Step 7 — Verify
 openclaw gateway status
 ```
 
@@ -239,6 +242,10 @@ instances/
 **`mas` can't install Amphetamine:** You need to be signed into the Mac App Store before running the script. If it fails, install [Amphetamine](https://apps.apple.com/app/id937984704) manually.
 
 **Node version still old after upgrade:** Run `source ~/.zshrc` and check `node --version`. If still wrong, check if another node manager (nvm, volta) is overriding the PATH.
+
+**`openclaw gateway start` fails:** Run `openclaw onboard --install-daemon` first to register the service, then try again.
+
+**WhatsApp link fails:** Make sure the gateway is running (`openclaw gateway status`) before running `openclaw wa link`. You'll need to scan a QR code from your phone.
 
 ---
 
