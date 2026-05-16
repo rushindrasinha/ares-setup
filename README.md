@@ -1,10 +1,56 @@
 # ares-setup
 
-> One-command Mac setup for [OpenClaw](https://openclaw.ai) AI agent instances.
+> Public, one-command Mac setup for OpenClaw AI agent instances.
 
-Inspired by [thoughtbot/laptop](https://github.com/thoughtbot/laptop). Installs a clean, reproducible foundation for running an OpenClaw AI agent on any Mac — no API keys, no identity, no secrets baked in. Safe to re-run on an existing machine (all installs are idempotent).
+`ares-setup` is the clean base layer for turning a fresh Mac into an OpenClaw-ready agent machine. It installs the operating-system dependencies, OpenClaw runtime, Claude Code, Python tooling, headless-safe Mac settings, and starter identity templates — without shipping secrets, API keys, personal memory, or private skills.
 
-**This is step 1 of 2.** After this, run [ares-stack](https://github.com/rushindrasinha/ares-stack) to add skills and profile-specific tools.
+This repo is intentionally public and reusable. The private/personal layer lives in [`rushindrasinha/ares-stack`](https://github.com/rushindrasinha/ares-stack), which is run after this repo finishes.
+
+---
+
+## Table of Contents
+
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [What This Repo Is For](#what-this-repo-is-for)
+- [What It Installs](#what-it-installs)
+- [What It Configures](#what-it-configures)
+- [Install Flow](#install-flow)
+- [After Install](#after-install)
+- [Workspace Layout](#workspace-layout)
+- [Identity Files](#identity-files)
+- [Instance Templates](#instance-templates)
+- [Adding a New Instance](#adding-a-new-instance)
+- [Security Model](#security-model)
+- [Re-running Safely](#re-running-safely)
+- [Troubleshooting](#troubleshooting)
+- [Repo Structure](#repo-structure)
+
+---
+
+## Architecture
+
+Ares-style machines are built in two layers:
+
+| Layer | Repo | Visibility | Purpose |
+|---|---|---:|---|
+| 1 | `ares-setup` | Public | Fresh Mac bootstrap: Homebrew, Node, Python, OpenClaw, Claude Code, starter workspace, headless-safe settings |
+| 2 | `ares-stack` | Private | Personal/operator layer: profiles, private skills, advanced tooling, Nova upgrades, machine-specific extensions |
+
+Canonical sequence:
+
+```bash
+# 1. Public base layer
+bash <(curl -H "Cache-Control: no-cache" -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh)
+
+# 2. Private stack layer, after GitHub auth
+cd ~
+gh repo clone rushindrasinha/ares-stack ~/ares-stack
+cd ~/ares-stack
+bash extend.sh --profile base
+```
+
+Use `ares-setup` to get any Mac to a known-good baseline. Use `ares-stack` only after the machine is authenticated and ready for private repo access.
 
 ---
 
@@ -13,248 +59,481 @@ Inspired by [thoughtbot/laptop](https://github.com/thoughtbot/laptop). Installs 
 Open Terminal on a fresh Mac and run:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh)
+bash <(curl -H "Cache-Control: no-cache" -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh)
 ```
 
-Takes ~5 minutes. You'll be prompted once for a hostname.
+You will be prompted for a hostname such as:
+
+- `ares-mini`
+- `ge-mini`
+- `hospital-mini`
+- `creatoros-mini`
+
+The script is designed to be idempotent: it checks for existing installs before installing most tools and will skip identity templates that already exist.
 
 ---
 
-## What It Does (Step by Step)
+## What This Repo Is For
 
-`install.sh` runs in this order:
+Use this repo when you need to:
 
-1. **Detects architecture** — Apple Silicon (M-series) or Intel. On Apple Silicon, installs Rosetta 2 automatically.
-2. **Sets hostname** — prompts you to name the machine (`ares-mini`, `ge-mini`, `hospital-mini`, etc.). Sets ComputerName, HostName, and LocalHostName.
-3. **Configures for headless operation** — disables sleep, enables SSH, disables screen saver, enables auto-restart after power failure.
-4. **Installs Homebrew** — skips if already present.
-5. **Installs core tools** via Homebrew — git, node, python3, wget, jq, gh, ffmpeg, imagemagick, poppler, mas.
-6. **Installs Amphetamine** via mas (Mac App Store) — keeps the Mac awake during remote sessions.
-7. **Upgrades Node to v24** if current version is below 24 (minimum required for OpenClaw).
-8. **Creates a Python venv** at `~/.ares-venv` and installs packages.
-9. **Installs uv** — fast Python runner, used by some agent scripts.
-10. **Installs OpenClaw** via npm (`npm install -g openclaw@latest`).
-11. **Installs Claude Code** via npm (`npm install -g @anthropic-ai/claude-code`).
-12. **Scaffolds workspace** at `~/.openclaw/workspace/` — creates `memory/`, `skills/`, and `~/.learnings/`.
-13. **Downloads identity templates** — pulls `SOUL.md`, `AGENTS.md`, `TOOLS.md` from `instances/_template/` into `~/.openclaw/workspace/`.
-14. **Creates learnings files** — blank `ERRORS.md`, `LEARNINGS.md`, `DECISIONS.md`, `REGRESSIONS.md` in `~/.learnings/`.
-15. **Authenticates GitHub** via `gh auth login --web` — needed to clone the private `ares-stack` repo in the next step.
+- Bootstrap a fresh Mac Mini or MacBook into an OpenClaw agent machine.
+- Standardize Node, Python, OpenClaw, Claude Code, and common CLI tools.
+- Prepare a Mac for headless / remote operation.
+- Create a clean OpenClaw workspace at `~/.openclaw/workspace/`.
+- Install only public, non-secret templates.
+- Prepare GitHub CLI auth so the private stack can be cloned next.
+
+Do **not** put personal memory, API keys, private automation logic, machine secrets, private skills, or client data in this repo.
 
 ---
 
 ## What It Installs
 
-### Core tools
+### Core runtime
 
-| Tool | Purpose |
-|------|---------|
-| Homebrew | Mac package manager |
-| Node 24 | Runtime for OpenClaw |
-| Python 3 + venv | Scripting + automation |
-| OpenClaw | AI agent platform |
-| Claude Code | Agentic coding CLI (`claude` command) |
-| uv | Fast Python package runner |
-| git | Version control |
-| jq | JSON parsing in shell scripts |
-| wget | HTTP downloads |
-| gh | GitHub CLI (for cloning private repos) |
-| ffmpeg | Video/audio processing |
-| imagemagick | Image manipulation |
-| poppler | PDF utilities |
-| mas | Mac App Store CLI |
-| Amphetamine | Keeps Mac awake during remote sessions |
+| Tool | Why it exists |
+|---|---|
+| Homebrew | macOS package manager |
+| Node 24+ | Runtime required/recommended for OpenClaw and agent CLIs |
+| Python 3 | Local scripts and automation |
+| `~/.ares-venv` | Isolated Python environment for common packages |
+| OpenClaw | Agent gateway/runtime |
+| Claude Code | Agentic coding CLI (`claude`) |
+| `uv` | Fast Python package/tool runner |
+| GitHub CLI (`gh`) | GitHub auth and private repo clone flow |
 
-### Python packages (installed into `~/.ares-venv`)
+### Homebrew packages
 
 | Package | Purpose |
-|---------|---------|
-| requests | HTTP client |
-| reportlab | PDF generation |
-| pillow | Image processing |
-| python-dotenv | `.env` file loading |
-| google-auth | Google OAuth2 |
-| google-auth-oauthlib | Google OAuth2 flow |
-| google-api-python-client | Google APIs (Drive, Sheets, etc.) |
-| openai | OpenAI SDK |
-| anthropic | Anthropic SDK |
+|---|---|
+| `git` | Version control |
+| `node` | JavaScript runtime / npm |
+| `python3` | Python runtime |
+| `wget` | HTTP downloads |
+| `jq` | JSON parsing |
+| `gh` | GitHub auth + repo operations |
+| `ffmpeg` | Audio/video processing |
+| `imagemagick` | Image processing |
+| `poppler` | PDF utilities |
+| `mas` | Mac App Store CLI |
+
+### Python packages in `~/.ares-venv`
+
+| Package | Purpose |
+|---|---|
+| `requests` | HTTP client |
+| `reportlab` | PDF generation |
+| `pillow` | Image processing |
+| `python-dotenv` | `.env` loading |
+| `google-auth` | Google auth primitives |
+| `google-auth-oauthlib` | Google OAuth browser flow |
+| `google-api-python-client` | Google Workspace APIs |
+| `openai` | OpenAI SDK |
+| `anthropic` | Anthropic SDK |
+
+### Optional / best-effort
+
+| Tool | Install method | Notes |
+|---|---|---|
+| Amphetamine | Mac App Store via `mas` | Keeps the Mac awake. If App Store install fails, install manually. |
+| Rosetta 2 | `softwareupdate` | Installed automatically on Apple Silicon when missing. |
 
 ---
 
 ## What It Configures
 
-### Headless operation (all settings are system-level)
+### macOS headless-safe settings
 
-| Setting | Command | Why |
-|---------|---------|-----|
-| Hostname | `scutil --set ComputerName/HostName/LocalHostName` | Identify the machine on the network |
-| Display sleep | `pmset -a displaysleep 0` | Don't go dark mid-session |
-| System sleep | `pmset -a sleep 0` | Stay on between connections |
-| Disk sleep | `pmset -a disksleep 0` | Stay accessible during heavy I/O |
-| SSH / Remote Login | `systemsetup -setremotelogin on` | SSH access from anywhere |
-| Screen saver | `defaults write idleTime 0` | No interruptions |
-| Auto-restart | `pmset -a autorestart 1` | Comes back after power outage |
+| Setting | Why |
+|---|---|
+| Hostname / ComputerName / LocalHostName | Makes machines identifiable on the network |
+| Display sleep off | Prevents remote sessions from going dark |
+| System sleep off | Keeps agent available |
+| Disk sleep off | Avoids I/O interruption |
+| SSH / Remote Login on | Enables remote administration |
+| Screen saver disabled | Avoids interruption during unattended sessions |
+| Auto-restart after power failure | Recovers after outages |
 
-### PATH additions (written to `~/.zshrc`)
+### Shell paths written to `~/.zshrc`
 
-- Homebrew shellenv
-- `node@24` bin path (if upgraded)
-- `~/.ares-venv/bin` (Python venv)
-- `~/.local/bin` (uv)
+The script appends path setup only if missing:
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv)"   # Apple Silicon
+# or /usr/local/bin/brew shellenv on Intel
+export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
+export PATH="$HOME/.ares-venv/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+---
+
+## Install Flow
+
+`install.sh` runs roughly in this order:
+
+1. Detects architecture: Apple Silicon (`arm64`) vs Intel.
+2. Installs Rosetta 2 on Apple Silicon if missing.
+3. Prompts for machine hostname.
+4. Applies headless-safe macOS settings.
+5. Installs Homebrew if missing.
+6. Installs core Homebrew packages.
+7. Attempts Amphetamine install via Mac App Store CLI.
+8. Ensures Node 24+ is available.
+9. Creates Python venv at `~/.ares-venv`.
+10. Installs common Python packages into that venv.
+11. Installs `uv` if missing.
+12. Installs OpenClaw globally with npm.
+13. Installs Claude Code globally with npm.
+14. Creates workspace directories.
+15. Downloads starter identity templates into the workspace.
+16. Creates governed learning files under `~/.learnings/`.
+17. Runs GitHub web auth if `gh` is not authenticated.
+18. Prints the next-step checklist.
 
 ---
 
 ## After Install
 
+Run these steps after the script completes:
+
 ```bash
-# Step 1 — Reload shell
+# 1. Reload shell paths
 source ~/.zshrc
 
-# Step 2 — Edit your identity files
-nano ~/.openclaw/workspace/SOUL.md    # AI personality + operating rules
-nano ~/.openclaw/workspace/AGENTS.md  # Session behavior, memory rules, red lines
-nano ~/.openclaw/workspace/TOOLS.md   # Environment notes (SSH, devices, TTS)
+# 2. Review/edit starter identity files
+nano ~/.openclaw/workspace/SOUL.md
+nano ~/.openclaw/workspace/AGENTS.md
+nano ~/.openclaw/workspace/TOOLS.md
 
-# Step 3 — Run OpenClaw onboarding (installs daemon + walks through API key setup)
+# 3. Run OpenClaw onboarding and install daemon
 openclaw onboard --install-daemon
 
-# Step 4 — Start OpenClaw gateway
+# 4. Start gateway
 openclaw gateway start
 
-# Step 5 — Link WhatsApp (or your messaging channel)
+# 5. Link WhatsApp or configured channel
 openclaw wa link
+# If your OpenClaw version uses the channel login command instead:
+# openclaw channels login
 
-# Step 6 — Clone and run ares-stack (skills + profile tools)
-git clone https://github.com/rushindrasinha/ares-stack.git
-cd ares-stack && bash extend.sh --profile base
+# 6. Clone private stack
+cd ~
+gh repo clone rushindrasinha/ares-stack ~/ares-stack
+# or: git clone https://github.com/rushindrasinha/ares-stack.git ~/ares-stack
 
-# Step 7 — Verify
+# 7. Run private extension layer
+cd ~/ares-stack
+bash extend.sh --profile base
+
+# 8. Verify
 openclaw gateway status
 ```
 
-Full customization guide: [docs/CUSTOMIZE.md](docs/CUSTOMIZE.md)  
-OpenClaw docs: [docs.openclaw.ai](https://docs.openclaw.ai)
+For Anthropic Max token auth / Claude Code token setup, install Claude Code first, then run:
+
+```bash
+openclaw models auth setup-token
+```
 
 ---
 
 ## Workspace Layout
 
-After install, your workspace looks like this:
+After install:
 
-```
+```text
 ~/.openclaw/workspace/
-  SOUL.md              ← AI personality, values, operating rules
-  AGENTS.md            ← Session startup, memory rules, red lines
-  TOOLS.md             ← Environment-specific notes
-  memory/              ← Agent memory files (created by agent over time)
-  skills/              ← Skill modules (populated by ares-stack)
+├── SOUL.md              # Agent identity, tone, principles, operating stance
+├── AGENTS.md            # Session rules, memory protocol, red lines
+├── TOOLS.md             # Machine-specific tool notes and environment facts
+├── memory/              # Long-lived memory files created/maintained over time
+└── skills/              # Legacy/simple skills dir; private stack uses .agents/skills too
 
 ~/.learnings/
-  ERRORS.md            ← Raw incidents: what went wrong + root cause
-  LEARNINGS.md         ← Validated patterns promoted from ERRORS
-  DECISIONS.md         ← Deliberate architectural/behavioral choices
-  REGRESSIONS.md       ← Things that broke after working correctly
+├── ERRORS.md            # Raw incidents and mistakes
+├── LEARNINGS.md         # Validated patterns promoted from incidents
+├── DECISIONS.md         # Deliberate architecture / behavior choices
+└── REGRESSIONS.md       # Things that broke after previously working
 ```
 
-The three identity files are injected into every agent session at startup. They are your agent's memory across reboots.
+OpenClaw’s standard injected workspace files are:
+
+- `SOUL.md`
+- `AGENTS.md`
+- `TOOLS.md`
+
+Other files such as `USER.md`, `IDENTITY.md`, `MEMORY.md`, and `HEARTBEAT.md` can exist in personal stacks, but they are not part of the clean public baseline.
 
 ---
 
-## The Identity Files
+## Identity Files
 
-### SOUL.md — Who the agent is
+### `SOUL.md`
 
-Personality, values, operating rules, tone, and red lines. The agent reads this at the start of every session.
+Defines who the agent is:
 
-Key things to fill in after install:
-- `[AI_NAME]` — what to call the agent (e.g. Ares, Nova, Hermes)
-- `[OWNER_NAME]` — your name
-- `[TIMEZONE]` — e.g. `Asia/Kolkata`
-- Any domain-specific rules, communication style preferences, or off-limits behaviors
+- name
+- owner
+- tone
+- values
+- operating stance
+- red lines
+- communication style
+- autonomy boundaries
 
-### AGENTS.md — How the agent behaves
+Fill placeholders such as:
 
-Session startup sequence, memory read/write rules, how the agent handles uncertainty, what it must never do. More operational than SOUL.md.
+- `[AI_NAME]`
+- `[OWNER_NAME]`
+- `[TIMEZONE]`
 
-### TOOLS.md — What's on this machine
+### `AGENTS.md`
 
-SSH host aliases, camera/microphone device names, TTS preferences, API endpoint nicknames, local tool paths. Specific to the hardware this instance is running on. Fill this in as you configure the machine — nothing goes here until you know what's installed.
+Defines how the agent works:
+
+- what to read on startup
+- memory rules
+- verification rules
+- execution behavior
+- tool usage constraints
+- never-do rules
+
+This is more operational than `SOUL.md`.
+
+### `TOOLS.md`
+
+Machine/environment cheat sheet:
+
+- SSH hosts
+- device names
+- camera/microphone names
+- preferred TTS voices
+- local paths
+- service ports
+- API endpoint nicknames
+
+Keep reusable skill instructions in actual skills. Keep environment-specific facts in `TOOLS.md`.
 
 ---
 
 ## Instance Templates
 
-Pre-built identity file sets live in `instances/`:
+Templates live in `instances/`:
 
-```
+```text
 instances/
-  _template/          ← blank starter with [PLACEHOLDER] values
-    SOUL.md
-    AGENTS.md
-    TOOLS.md
-  ge-mini/            ← GE Mac Mini (Global Esports — Twitch, stream, YouTube)
-    SOUL.md
-    AGENTS.md
-    TOOLS.md
-    users.json        ← multi-user config for GE instance
+├── _template/
+│   ├── SOUL.md
+│   ├── AGENTS.md
+│   └── TOOLS.md
+└── ge-mini/
+    ├── SOUL.md
+    ├── AGENTS.md
+    ├── TOOLS.md
+    └── users.json
 ```
 
-`install.sh` automatically downloads the `_template/` files into `~/.openclaw/workspace/` on a fresh install. If those files already exist, they are not overwritten.
+`install.sh` downloads from `instances/_template/` by default.
+
+If `~/.openclaw/workspace/SOUL.md`, `AGENTS.md`, or `TOOLS.md` already exists, the script does **not** overwrite it.
 
 ---
 
 ## Adding a New Instance
 
-1. Copy `instances/_template/` → `instances/[machine-name]/`
-2. Fill in all `[PLACEHOLDER]` values in the three files
-3. Run `install.sh` on the new Mac
-4. Copy your instance files to `~/.openclaw/workspace/` on that machine
-5. `openclaw onboard --install-daemon`
-6. Clone and run ares-stack: `bash extend.sh --profile base` (or your profile)
+Recommended flow:
+
+1. Copy `instances/_template/` to `instances/<machine-name>/`.
+2. Fill all placeholders.
+3. Keep secrets out of the repo.
+4. Run `install.sh` on the target Mac.
+5. Copy the finalized identity files to `~/.openclaw/workspace/`.
+6. Run `openclaw onboard --install-daemon`.
+7. Start gateway and link channel.
+8. Clone `ares-stack`.
+9. Run `bash extend.sh --profile <base|ge|hospital>`.
+10. Send `/status` to the linked channel and verify response.
+
+Example:
+
+```bash
+cp -R instances/_template instances/hospital-mini
+# edit instances/hospital-mini/SOUL.md, AGENTS.md, TOOLS.md
+```
 
 ---
 
-## Architecture Notes
+## Security Model
 
-- **Apple Silicon (M1/M2/M4+):** Homebrew installs to `/opt/homebrew`. Rosetta 2 is installed automatically.
-- **Intel:** Homebrew installs to `/usr/local`. No Rosetta needed.
-- The script detects arch via `uname -m` and sets `HOMEBREW_PREFIX` accordingly.
-- All installs check if the tool is already present before installing — safe to re-run.
+This repo must remain safe to publish.
+
+### Allowed in `ares-setup`
+
+- public setup scripts
+- generic identity templates
+- non-secret docs
+- public machine bootstrap commands
+- placeholder values
+
+### Not allowed in `ares-setup`
+
+- API keys
+- OAuth tokens
+- `.env` files
+- private memory
+- private skills
+- customer data
+- hardcoded personal credentials
+- machine-specific private paths
+- client-specific operating doctrine
+
+### Credential handling
+
+- Use OpenClaw auth flows for model/provider credentials.
+- Use `gh auth login` or SSH keys for private GitHub repo access.
+- Use the private stack or vault tooling for private operational material.
+- Never embed secrets in `install.sh`, README examples, or templates.
+
+The `.gitignore` blocks common credential patterns, but do not rely on `.gitignore` as the only guardrail.
 
 ---
 
-## Security Notes
+## Re-running Safely
 
-- **No secrets are injected** — zero API keys, tokens, or credentials written to disk by `install.sh`.
-- API keys are added later via `openclaw auth login` per provider.
-- The `.gitignore` in this repo blocks `*.env`, `*.pem`, `*.key`, and other credential file patterns from being committed.
-- GitHub auth (`gh auth login`) is done via browser OAuth — no credentials are stored in plaintext.
+`install.sh` is designed to be safe to re-run:
+
+- Existing Homebrew packages are skipped.
+- Existing identity files are not overwritten.
+- `~/.zshrc` additions are appended only when missing.
+- Existing GitHub auth is reused.
+- Existing Python venv is reused/updated.
+
+Be careful with hostname changes: if you enter a new hostname, macOS names will be updated.
 
 ---
 
 ## Troubleshooting
 
-**Homebrew install hangs:** Check your internet connection. Homebrew installation can take 1–2 minutes.
+### `openclaw: command not found`
 
-**`openclaw: command not found` after install:** Run `source ~/.zshrc` to reload PATH. If still missing, check that `npm install -g openclaw` succeeded (scroll up in the install output).
+Reload shell paths:
 
-**GitHub auth fails:** Run `gh auth login --web` manually after install.
+```bash
+source ~/.zshrc
+```
 
-**`mas` can't install Amphetamine:** You need to be signed into the Mac App Store before running the script. If it fails, install [Amphetamine](https://apps.apple.com/app/id937984704) manually.
+Then check:
 
-**Node version still old after upgrade:** Run `source ~/.zshrc` and check `node --version`. If still wrong, check if another node manager (nvm, volta) is overriding the PATH.
+```bash
+npm list -g --depth=0 | grep openclaw
+```
 
-**`openclaw gateway start` fails:** Run `openclaw onboard --install-daemon` first to register the service, then try again.
+### `gh repo clone rushindrasinha/ares-stack` fails
 
-**WhatsApp link fails:** Make sure the gateway is running (`openclaw gateway status`) before running `openclaw wa link`. You'll need to scan a QR code from your phone.
+Authenticate first:
+
+```bash
+gh auth login --web --git-protocol https
+gh auth status
+```
+
+If using SSH instead:
+
+```bash
+ssh-keygen -t ed25519 -C "your-email@example.com"
+cat ~/.ssh/id_ed25519.pub
+# Add this key to GitHub, then clone with git@github.com:rushindrasinha/ares-stack.git
+```
+
+### Amphetamine install fails
+
+Amphetamine is a Mac App Store app. Install manually if `mas install 937984704` fails:
+
+- Open the Mac App Store.
+- Search `Amphetamine`.
+- Install and configure it to keep the Mac awake.
+
+### Homebrew install hangs
+
+Homebrew can take a few minutes on fresh machines. If it fails, run:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Then re-run `install.sh`.
+
+### Node version is still old
+
+Check:
+
+```bash
+node --version
+which node
+```
+
+Reload shell:
+
+```bash
+source ~/.zshrc
+```
+
+If needed:
+
+```bash
+brew install node@24
+brew link --overwrite --force node@24
+```
+
+### OpenClaw onboarding command
+
+Use:
+
+```bash
+openclaw onboard --install-daemon
+```
+
+Do not use older/nonexistent commands such as `openclaw setup`.
 
 ---
 
-## Changelog
+## Repo Structure
 
-See [CHANGELOG.md](CHANGELOG.md).
+```text
+.
+├── README.md
+├── CHANGELOG.md
+├── install.sh
+├── docs/
+│   └── CUSTOMIZE.md
+└── instances/
+    ├── _template/
+    │   ├── SOUL.md
+    │   ├── AGENTS.md
+    │   └── TOOLS.md
+    └── ge-mini/
+        ├── SOUL.md
+        ├── AGENTS.md
+        ├── TOOLS.md
+        └── users.json
+```
+
+---
+
+## Design Principles
+
+1. Public base, private stack.
+2. No secrets in public repos.
+3. Use `$HOME`, not hardcoded user paths.
+4. Make installs idempotent.
+5. Keep identity templates minimal and portable.
+6. Prefer explicit post-install verification over silent assumptions.
+7. Keep machine-specific detail in `TOOLS.md`, not generic scripts.
 
 ---
 
 ## License
 
-MIT
+Private/internal unless explicitly relicensed.
