@@ -50,7 +50,15 @@ cd ~/ares-stack
 bash extend.sh --profile base
 ```
 
-Use `ares-setup` to get any Mac to a known-good baseline. Use `ares-stack` only after the machine is authenticated and ready for private repo access.
+Or, one-stop — runs both layers in a single command (GitHub auth happens mid-script, then it auto-clones and runs `ares-stack`):
+
+```bash
+bash <(curl -H "Cache-Control: no-cache" -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh) --full
+# or a specific profile:
+bash <(curl -H "Cache-Control: no-cache" -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh) --full --profile ge
+```
+
+Use `ares-setup` to get any Mac to a known-good baseline. Use `ares-stack` only after the machine is authenticated and ready for private repo access. `--full` requires the machine to complete interactive GitHub auth mid-script (a browser login prompt) — expect to babysit that one step.
 
 ---
 

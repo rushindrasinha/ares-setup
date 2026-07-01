@@ -6,7 +6,11 @@
 # Usage:
 #   bash <(curl -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh)
 #
-# After install:
+#   # One-stop: also clones private ares-stack and runs extend.sh at the end
+#   bash <(curl -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh) --full
+#   bash <(curl -fsSL https://raw.githubusercontent.com/rushindrasinha/ares-setup/master/install.sh) --full --profile ge
+#
+# After install (if not using --full):
 #   cd ~ && git clone https://github.com/rushindrasinha/ares-stack.git
 #   cd ares-stack && bash extend.sh --profile <base|ge|hospital>
 #
@@ -14,6 +18,17 @@
 set -e
 
 REPO_RAW="https://raw.githubusercontent.com/rushindrasinha/ares-setup/master"
+
+# ── Args ──────────────────────────────────────────────────────────────────────
+FULL_INSTALL=false
+STACK_PROFILE="base"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --full) FULL_INSTALL=true ;;
+    --profile) shift; STACK_PROFILE="${1:-base}" ;;
+  esac
+  shift
+done
 
 fancy_echo() {
   printf "\n\033[1;34m▶ %s\033[0m\n" "$*"
@@ -180,13 +195,35 @@ done
 
 # ── GitHub auth ───────────────────────────────────────────────────────────────
 fancy_echo "Authenticating GitHub (needed to clone private ares-stack)..."
+GH_AUTHED=false
 if ! gh auth status &>/dev/null; then
   gh auth login --web --git-protocol https
-  if ! gh auth status &>/dev/null; then
+  if gh auth status &>/dev/null; then
+    GH_AUTHED=true
+  else
     warn_echo "GitHub auth failed. Run 'gh auth login' manually before cloning ares-stack."
   fi
 else
+  GH_AUTHED=true
   success_echo "GitHub already authenticated ($(gh api user --jq '.login' 2>/dev/null))"
+fi
+
+# ── Full install: auto-continue into private ares-stack layer ─────────────────
+STACK_DONE=false
+if [ "$FULL_INSTALL" = true ]; then
+  if [ "$GH_AUTHED" = true ]; then
+    fancy_echo "Full install requested — cloning ares-stack (profile: $STACK_PROFILE)..."
+    if [ ! -d "$HOME/ares-stack" ]; then
+      gh repo clone rushindrasinha/ares-stack "$HOME/ares-stack" -- -q
+    else
+      success_echo "ares-stack already cloned at ~/ares-stack"
+    fi
+    (cd "$HOME/ares-stack" && bash extend.sh --profile "$STACK_PROFILE") \
+      && { STACK_DONE=true; success_echo "ares-stack extend.sh complete (profile: $STACK_PROFILE)"; } \
+      || warn_echo "ares-stack extend.sh failed — run it manually: cd ~/ares-stack && bash extend.sh --profile $STACK_PROFILE"
+  else
+    warn_echo "Skipping ares-stack auto-clone — GitHub auth didn't complete. Run 'gh auth login' then the step 2/3 commands below."
+  fi
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────
@@ -195,10 +232,19 @@ printf "\033[1;32m╔═══════════════════�
 printf "\033[1;32m║        Machine setup complete ✓            ║\033[0m\n"
 printf "\033[1;32m╚════════════════════════════════════════════╝\033[0m\n"
 printf "\n"
-printf "Next steps:\n"
-printf "  1. Restart terminal        →  source ~/.zshrc\n"
-printf "  2. Clone private stack     →  git clone https://github.com/rushindrasinha/ares-stack.git\n"
-printf "  3. Run profile setup       →  cd ares-stack && bash extend.sh --profile hospital\n"
-printf "  4. Start OpenClaw          →  openclaw gateway start\n"
-printf "  5. Link WhatsApp           →  openclaw wa link\n"
-printf "\n"
+if [ "$STACK_DONE" = true ]; then
+  printf "Next steps:\n"
+  printf "  1. Restart terminal        →  source ~/.zshrc\n"
+  printf "  2. Configure identity      →  edit ~/.openclaw/workspace/SOUL.md, AGENTS.md, TOOLS.md\n"
+  printf "  3. Start OpenClaw          →  openclaw gateway start\n"
+  printf "  4. Link WhatsApp           →  openclaw wa link\n"
+  printf "\n"
+else
+  printf "Next steps:\n"
+  printf "  1. Restart terminal        →  source ~/.zshrc\n"
+  printf "  2. Clone private stack     →  git clone https://github.com/rushindrasinha/ares-stack.git\n"
+  printf "  3. Run profile setup       →  cd ares-stack && bash extend.sh --profile hospital\n"
+  printf "  4. Start OpenClaw          →  openclaw gateway start\n"
+  printf "  5. Link WhatsApp           →  openclaw wa link\n"
+  printf "\n"
+fi
